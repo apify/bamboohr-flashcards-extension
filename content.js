@@ -144,7 +144,7 @@ function saveGameState(gameState) {
       isGameOver: gameState.isGameOver,
       // Store only employee hashes, not full objects
       seenEmployeeHashes: Array.from(gameState.seenEmployees || []),
-      pendingRetryHashes: (gameState.pendingRetries || []).map(emp => generateNameHash(emp.name)),
+      mainQueueHashes: (gameState.mainQueue || []).map(emp => generateNameHash(emp.name)),
       gameEmployeeHashes: (gameState.gameEmployees || []).map(emp => generateNameHash(emp.name))
     };
     localStorage.setItem('bamboohr-flashcards-session', JSON.stringify(hashBasedState));
@@ -178,7 +178,7 @@ function getSavedGameState() {
       correctAnswers: hashBasedState.correctAnswers || 0,
       isGameOver: hashBasedState.isGameOver || false,
       seenEmployees: new Set(hashBasedState.seenEmployeeHashes || []),
-      pendingRetries: (hashBasedState.pendingRetryHashes || [])
+      mainQueue: (hashBasedState.mainQueueHashes || [])
         .map(hash => hashToEmployee[hash])
         .filter(emp => emp), // Remove any employees no longer in directory
       gameEmployees: (hashBasedState.gameEmployeeHashes || [])
@@ -213,47 +213,128 @@ function filterRecentEmployees(employees) {
 // Add flashcards button to the page
 function addFlashcardsButton() {
   // Check if button already exists
-  if (document.getElementById('flashcards-btn')) return;
+  if (document.getElementById('flashcards-btn')) {
+    console.log('Flashcards button already exists');
+    return;
+  }
   
-  const headerRight = document.querySelector('.EmployeeDirectory__headerRight');
-  if (!headerRight) return;
+  // Look for the Directory heading
+  const directoryTitle = document.querySelector('.PageHeader__title');
+  if (!directoryTitle || !directoryTitle.textContent.includes('Directory')) {
+    console.log('Directory title not found, trying alternative selectors...');
+    
+    // Try alternative selectors for Directory heading
+    const alternatives = [
+      'h2:contains("Directory")',
+      '[class*="PageHeader__title"]',
+      '.PageHeader h2',
+      'h1, h2, h3'
+    ];
+    
+    let foundTitle = null;
+    for (const selector of alternatives) {
+      if (selector.includes('contains')) {
+        // For contains selector, manually check
+        const elements = document.querySelectorAll('h2');
+        for (const el of elements) {
+          if (el.textContent.includes('Directory')) {
+            foundTitle = el;
+            break;
+          }
+        }
+      } else {
+        foundTitle = document.querySelector(selector);
+        if (foundTitle && foundTitle.textContent.includes('Directory')) {
+          break;
+        }
+        foundTitle = null;
+      }
+      
+      if (foundTitle) {
+        console.log('Found Directory title with selector:', selector);
+        break;
+      }
+    }
+    
+    if (!foundTitle) {
+      console.log('No Directory title found for flashcards button');
+      return;
+    }
+    
+    insertButtonNextToTitle(foundTitle);
+    return;
+  }
   
-  // Create container div similar to AnytimeDirectoryLink
-  const flashcardsContainer = document.createElement('div');
-  flashcardsContainer.className = 'FlashcardsLink';
-  flashcardsContainer.style.cssText = `
-    margin-left: 12px;
-    display: inline-block;
+  insertButtonNextToTitle(directoryTitle);
+}
+
+function insertButtonNextToTitle(titleElement) {
+  console.log('Inserting flashcards button next to title:', titleElement);
+  
+  // Create a wrapper span for the title and icon
+  const titleWrapper = document.createElement('span');
+  titleWrapper.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
   `;
   
-  // Create button with similar structure to Quick access button
+  // Create the flashcards icon button
   const flashcardsBtn = document.createElement('button');
   flashcardsBtn.id = 'flashcards-btn';
-  flashcardsBtn.className = 'fab-TextButton fab-link';
   flashcardsBtn.type = 'button';
+  flashcardsBtn.title = 'Start Flashcards Game';
+  flashcardsBtn.style.cssText = `
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  `;
   
   flashcardsBtn.innerHTML = `
-    <ba-icon class="" name="flashcards-icon" encore-name="square-arrow-up-right-regular" encore-size="16">
-      <svg class="fabric-1extfaq-svg" data-fabric-component="IconV2" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg">
-        <path xmlns="http://www.w3.org/2000/svg" d="M0 96C0 60.7 28.7 32 64 32H384c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96zM48 368v48c0 8.8 7.2 16 16 16H384c8.8 0 16-7.2 16-16V368H48zM48 256H400V96c0-8.8-7.2-16-16-16H64c-8.8 0-16 7.2-16 16V256zM144 144a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM304 192a32 32 0 1 1 0-64 32 32 0 1 1 0 64z"></path>
-      </svg>
-    </ba-icon>
-    <span class="FlashcardsLink__label" style="margin-left: 6px; font-size: 15px; line-height: 22px;">
-      Start Flashcards
-    </span>
+    <svg class="flashcards-icon-large" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px; fill: #0061ff;">
+      <path d="M0 96C0 60.7 28.7 32 64 32H384c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96zM48 368v48c0 8.8 7.2 16 16 16H384c8.8 0 16-7.2 16-16V368H48zM48 256H400V96c0-8.8-7.2-16-16-16H64c-8.8 0-16 7.2-16 16V256zM144 144a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM304 192a32 32 0 1 1 0-64 32 32 0 1 1 0 64z"></path>
+    </svg>
   `;
+  
+  // Add hover effects
+  flashcardsBtn.addEventListener('mouseenter', () => {
+    flashcardsBtn.style.transform = 'scale(1.1)';
+    flashcardsBtn.style.backgroundColor = 'rgba(0, 97, 255, 0.1)';
+    flashcardsBtn.querySelector('svg').style.fill = '#0056e0';
+  });
+  
+  flashcardsBtn.addEventListener('mouseleave', () => {
+    flashcardsBtn.style.transform = 'scale(1)';
+    flashcardsBtn.style.backgroundColor = 'transparent';
+    flashcardsBtn.querySelector('svg').style.fill = '#0061ff';
+  });
   
   flashcardsBtn.addEventListener('click', startFlashcards);
   
-  flashcardsContainer.appendChild(flashcardsBtn);
+  // Get the current title text
+  const titleText = titleElement.textContent;
   
-  // Insert the flashcards button before the Quick access button
-  const anytimeDirectoryLink = headerRight.querySelector('.AnytimeDirectoryLink');
-  if (anytimeDirectoryLink) {
-    headerRight.insertBefore(flashcardsContainer, anytimeDirectoryLink);
-  } else {
-    headerRight.appendChild(flashcardsContainer);
-  }
+  // Replace the title content with our wrapper
+  titleElement.textContent = '';
+  
+  // Add the title text back
+  const titleSpan = document.createElement('span');
+  titleSpan.textContent = titleText;
+  
+  // Add both to the wrapper
+  titleWrapper.appendChild(titleSpan);
+  titleWrapper.appendChild(flashcardsBtn);
+  
+  // Add wrapper to the title element
+  titleElement.appendChild(titleWrapper);
+  
+  console.log('Flashcards button successfully added next to Directory title');
 }
 
 // Start the flashcards game
@@ -303,6 +384,13 @@ function createFlashcardsModal() {
               <span class="stat-label">To Retry:</span>
               <span id="missed-count">0</span>
             </div>
+            <div class="stat-reset">
+              <button id="reset-btn" class="reset-btn-icon">
+                <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L335.4 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.4 1.1z"/>
+                </svg>
+              </button>
+            </div>
           </div>
           
           <div id="game-container">
@@ -313,8 +401,6 @@ function createFlashcardsModal() {
           
                       <div class="game-controls">
               <button id="restart-btn" style="display: none;">🔄 Restart Game</button>
-              <button id="reset-btn" style="display: none;">🔄 Reset Progress</button>
-              <button id="clear-memory-btn" style="display: none;">🗑️ Clear Memory</button>
             </div>
             
             <div class="flashcards-disclaimer">
@@ -337,18 +423,10 @@ function createFlashcardsModal() {
   });
   
   document.getElementById('reset-btn').addEventListener('click', () => {
-    if (confirm('Reset your current game progress? This will start over with all employees but keep your long-term memory.')) {
-      clearGameSession();
-      initializeFlashcardsGame();
-    }
-  });
-  
-  document.getElementById('clear-memory-btn').addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear all saved progress? This will reset both your current game and long-term memory.')) {
+    if (confirm('Reset all progress? This will clear your game and learning memory, starting completely fresh.')) {
       clearMasteredEmployees();
       clearGameSession();
-      alert('All progress cleared! The game will restart fresh.');
-      document.getElementById('flashcards-modal').remove();
+      initializeFlashcardsGame();
     }
   });
   
@@ -362,17 +440,24 @@ function initializeFlashcardsGame() {
   const savedGameState = getSavedGameState();
   
   let gameState;
-  if (savedGameState && savedGameState.gameEmployees.length > 0) {
-    // Resume existing game
+  if (savedGameState && savedGameState.gameEmployees.length > 0 && savedGameState.mainQueue) {
+    // Resume existing game (only if it has the new mainQueue structure)
     gameState = savedGameState;
   } else {
+    // Clear any old incompatible saved state
+    if (savedGameState) {
+      console.log('Clearing old incompatible saved game state');
+      clearGameSession();
+    }
     // Start new game with all employees
+    const shuffledEmployees = shuffleArray([...recentEmployees]);
     gameState = {
       currentIndex: 0,
       correctAnswers: 0,
       seenEmployees: new Set(), // Track employees we've already shown
-      pendingRetries: [], // Employees to retry later
-      gameEmployees: shuffleArray([...recentEmployees]),
+      mainQueue: [...shuffledEmployees], // Initialize main queue with all employees
+      gameEmployees: shuffledEmployees,
+      missedEmployees: [], // Track employees that were answered incorrectly
       isGameOver: false
     };
   }
@@ -384,6 +469,13 @@ function initializeFlashcardsGame() {
   
   // Store game state globally for restart functionality
   window.flashcardsGameState = gameState;
+  
+  // Debug logging
+  console.log('Game initialized with:', {
+    totalEmployees: gameState.gameEmployees.length,
+    mainQueueLength: gameState.mainQueue ? gameState.mainQueue.length : 0,
+    seenEmployees: gameState.seenEmployees.size
+  });
   
   // Save initial game state
   saveGameState(gameState);
@@ -399,50 +491,43 @@ function showNextEmployee() {
   
   let employee = null;
   
-  // First, check if we have pending retries and should randomly show one
-  if (gameState.pendingRetries.length > 0 && Math.random() < 0.3) {
-    // 30% chance to show a retry employee
-    const retryIndex = Math.floor(Math.random() * gameState.pendingRetries.length);
-    employee = gameState.pendingRetries[retryIndex];
-    // Remove from retries since we're showing it now
-    gameState.pendingRetries.splice(retryIndex, 1);
-    gameState.currentEmployee = employee;
-    gameState.isRetry = true;
-  } else {
-    // Show next unseen employee
-    let nextEmployee = null;
-    
-    // Find the next employee we haven't seen yet
+  // Initialize the main queue if it doesn't exist
+  if (!gameState.mainQueue) {
+    // Create main queue with all unseen employees
+    gameState.mainQueue = [];
     for (let i = gameState.currentIndex; i < gameState.gameEmployees.length; i++) {
       const emp = gameState.gameEmployees[i];
       const empHash = generateNameHash(emp.name);
       if (!gameState.seenEmployees.has(empHash)) {
-        nextEmployee = emp;
-        gameState.currentIndex = i + 1;
-        break;
+        gameState.mainQueue.push(emp);
       }
     }
+    // Add any existing pending retries to the end
+    if (gameState.pendingRetries && gameState.pendingRetries.length > 0) {
+      gameState.mainQueue.push(...gameState.pendingRetries);
+      gameState.pendingRetries = []; // Clear the old retry queue
+    }
+  }
+  
+  // Take the next employee from the front of the main queue
+  if (gameState.mainQueue.length > 0) {
+    const nextEmployee = gameState.mainQueue.shift();
+    const empHash = generateNameHash(nextEmployee.name);
     
-    if (!nextEmployee) {
-      // No more unseen employees, check if we have retries left
-      if (gameState.pendingRetries.length > 0) {
-        const retryIndex = Math.floor(Math.random() * gameState.pendingRetries.length);
-        nextEmployee = gameState.pendingRetries[retryIndex];
-        gameState.pendingRetries.splice(retryIndex, 1);
-        gameState.isRetry = true;
-      } else {
-        // Game complete - no more employees and no retries
-        showGameComplete();
-        return;
-      }
-    } else {
-      // Mark this employee as seen (using hash)
-      gameState.seenEmployees.add(generateNameHash(nextEmployee.name));
-      gameState.isRetry = false;
+    // Check if this is a retry (already seen before)
+    gameState.isRetry = gameState.seenEmployees.has(empHash);
+    
+    // Mark as seen if it's not already
+    if (!gameState.isRetry) {
+      gameState.seenEmployees.add(empHash);
     }
     
     employee = nextEmployee;
     gameState.currentEmployee = employee;
+  } else {
+    // Game complete - no more employees in queue
+    showGameComplete();
+    return;
   }
   
   if (!employee) {
@@ -549,10 +634,17 @@ function selectAnswer(optionIndex, selectedId) {
       }
     });
     
-    // Add to pending retries if not already there and if it's not already a retry
+    // Add to the end of the main queue if not already there
     const currentEmpHash = generateNameHash(currentEmployee.name);
-    if (!gameState.isRetry && !gameState.pendingRetries.find(emp => generateNameHash(emp.name) === currentEmpHash)) {
-      gameState.pendingRetries.push(currentEmployee);
+    
+    // Initialize main queue if it doesn't exist
+    if (!gameState.mainQueue) {
+      gameState.mainQueue = [];
+    }
+    
+    // Check if employee is not already in the main queue
+    if (!gameState.mainQueue.find(emp => generateNameHash(emp.name) === currentEmpHash)) {
+      gameState.mainQueue.push(currentEmployee);
     }
     
     // Track missed for statistics
@@ -576,13 +668,23 @@ function selectAnswer(optionIndex, selectedId) {
 function updateStats() {
   const gameState = window.flashcardsGameState;
   
-  // Calculate remaining: unseen employees + pending retries
-  const unseenCount = gameState.gameEmployees.length - gameState.seenEmployees.size;
-  const totalRemaining = unseenCount + gameState.pendingRetries.length;
+  // Calculate remaining: all employees left in the main queue
+  const totalRemaining = (gameState.mainQueue || []).length;
+  
+  // Calculate missed count: total people ever added to retry queue
+  const missedCount = (gameState.missedEmployees || []).length;
+  
+  // Debug logging
+  console.log('Stats updated:', {
+    totalRemaining,
+    correctAnswers: gameState.correctAnswers,
+    missedCount,
+    mainQueueLength: gameState.mainQueue ? gameState.mainQueue.length : 'undefined'
+  });
   
   document.getElementById('remaining-count').textContent = totalRemaining;
   document.getElementById('correct-count').textContent = gameState.correctAnswers;
-  document.getElementById('missed-count').textContent = gameState.pendingRetries.length;
+  document.getElementById('missed-count').textContent = missedCount;
 }
 
 // Show game completion screen
@@ -625,15 +727,11 @@ function showGameComplete() {
   `;
   
   document.getElementById('restart-btn').style.display = 'inline-block';
-  document.getElementById('reset-btn').style.display = 'inline-block';
-  document.getElementById('clear-memory-btn').style.display = 'inline-block';
 }
 
 // Restart the game
 function restartGame() {
   document.getElementById('restart-btn').style.display = 'none';
-  document.getElementById('reset-btn').style.display = 'none';
-  document.getElementById('clear-memory-btn').style.display = 'none';
   
   // Clear current game session
   clearGameSession();
@@ -658,15 +756,37 @@ window.restartGame = restartGame;
 
 // Wait for page load and add button
 function init() {
+  console.log('Initializing BambooHR Flashcards Extension');
+  
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
     return;
   }
   
-  // Wait a bit for dynamic content to load
-  setTimeout(() => {
+  // Try multiple times with increasing delays
+  const tryAddButton = (attempt = 1, maxAttempts = 5) => {
+    console.log(`Attempt ${attempt} to add flashcards button`);
+    
     addFlashcardsButton();
-  }, 2000);
+    
+    // Check if button was added successfully
+    if (document.getElementById('flashcards-btn')) {
+      console.log('Flashcards button added successfully');
+      return;
+    }
+    
+    // If not successful and we have more attempts, try again
+    if (attempt < maxAttempts) {
+      const delay = attempt * 1000; // Increasing delay: 1s, 2s, 3s, 4s
+      console.log(`Retrying in ${delay}ms...`);
+      setTimeout(() => tryAddButton(attempt + 1, maxAttempts), delay);
+    } else {
+      console.log('Failed to add flashcards button after all attempts');
+    }
+  };
+  
+  // Start trying immediately, then with delays
+  tryAddButton();
 }
 
 init(); 
