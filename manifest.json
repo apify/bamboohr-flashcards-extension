@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "BambooHR Employee Flashcards",
+  "version": "1.0",
+  "description": "Memorize new colleagues' names and roles through flashcard game.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://*.bamboohr.com/employees/directory.php*"],
+      "js": ["content.js"],
+      "css": ["flashcards.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["flashcards.html"],
+      "matches": ["https://*.bamboohr.com/*"]
+    }
+  ]
+} 

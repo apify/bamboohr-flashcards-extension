@@ -1,0 +1,475 @@
+/* BambooHR Flashcards Extension Styles */
+
+/* Modal Overlay */
+.flashcards-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+/* Main Container */
+.flashcards-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+  width: 75%;
+  max-width: 420px;
+  max-height: 75vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.flashcards-header {
+  background: linear-gradient(135deg, #0061ff, #0056e0);
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flashcards-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: white !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.flashcards-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Content Area */
+.flashcards-content {
+  padding: 12px 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Game Stats */
+.game-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.stat {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat span:last-child {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0061ff;
+}
+
+/* Game Container */
+#game-container {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Loading State */
+#loading-state {
+  text-align: center;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+/* Flashcard */
+.flashcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+/* Employee Photo */
+.employee-photo {
+  margin-bottom: 12px;
+}
+
+.employee-photo img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Question Section */
+.question-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #343a40;
+  font-weight: 600;
+}
+
+/* Answer Options */
+.answer-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.answer-btn {
+  background: white;
+  border: 2px solid #e9ecef;
+  padding: 12px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  color: #343a40;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.answer-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #212529;
+  line-height: 1.3;
+}
+
+.answer-role {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6c757d;
+  line-height: 1.2;
+}
+
+.answer-btn:hover:not(:disabled) {
+  border-color: #0061ff;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.answer-btn:disabled {
+  cursor: not-allowed;
+}
+
+.answer-btn.correct {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+  font-weight: 600;
+}
+
+.answer-btn.incorrect {
+  background: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+  font-weight: 600;
+}
+
+/* Game Controls */
+.game-controls {
+  margin-top: 12px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#restart-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+#restart-btn:hover {
+  background: #218838;
+}
+
+#reset-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+#reset-btn:hover {
+  background: #0056b3;
+}
+
+#clear-memory-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+#clear-memory-btn:hover {
+  background: #c82333;
+}
+
+/* Header Button Alignment */
+.FlashcardsLink {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+.FlashcardsLink button {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+/* Disclaimer */
+.flashcards-disclaimer {
+  text-align: center;
+  padding: 4px 16px 6px;
+  font-size: 10px;
+  color: #adb5bd;
+  margin-top: 8px;
+}
+
+.flashcards-disclaimer a {
+  color: #6c757d;
+  text-decoration: none;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.flashcards-disclaimer a:hover {
+  color: #495057;
+  text-decoration: underline;
+}
+
+/* Game Complete */
+.game-complete {
+  text-align: center;
+  padding: 20px;
+}
+
+.game-complete h3 {
+  margin: 0 0 20px 0;
+  font-size: 24px;
+  color: #28a745;
+  font-weight: 700;
+}
+
+.final-stats {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.final-stats p {
+  margin: 8px 0;
+  font-size: 16px;
+  color: #343a40;
+}
+
+.final-stats strong {
+  color: #0061ff;
+}
+
+.perfect-score {
+  font-size: 18px;
+  color: #28a745;
+  font-weight: 600;
+  margin: 20px 0;
+}
+
+/* Missed Employees */
+.missed-employees {
+  margin-top: 20px;
+}
+
+.missed-employees h4 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.missed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.missed-employee {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.missed-employee img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+}
+
+.missed-employee div {
+  flex: 1;
+  text-align: left;
+}
+
+.missed-employee strong {
+  color: #343a40;
+  font-weight: 600;
+}
+
+.missed-employee small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .flashcards-container {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .flashcards-header {
+    padding: 15px;
+  }
+  
+  .flashcards-header h2 {
+    font-size: 20px;
+  }
+  
+  .flashcards-content {
+    padding: 15px;
+  }
+  
+  .game-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .employee-photo img {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .question-section h3 {
+    font-size: 18px;
+  }
+  
+  .answer-btn {
+    padding: 12px 16px;
+  }
+  
+  .answer-name {
+    font-size: 15px;
+  }
+  
+  .answer-role {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .flashcards-overlay {
+    padding: 10px;
+  }
+  
+  .employee-photo img {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .game-stats {
+    padding: 12px;
+  }
+  
+  .stat span:last-child {
+    font-size: 18px;
+  }
+} 

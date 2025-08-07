@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BambooHR Flashcards Demo</title>
+    <link rel="stylesheet" href="flashcards.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .demo-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-btn {
+            background: #0061ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .demo-btn:hover {
+            background: #0056e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1>🎴 BambooHR Flashcards Extension Demo</h1>
+            <p>This is a preview of how the flashcards game looks when integrated with BambooHR</p>
+            <button class="demo-btn" onclick="showDemo()">
+                🎴 Start Demo Flashcards
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Note: This demo file shows the flashcards interface.
+        // In the actual Chrome extension, employee data is extracted 
+        // directly from the BambooHR directory page.
+
+        let gameState = null;
+
+        function showDemo() {
+            // Show message that this is a demo interface
+            document.querySelector('.flashcards-content').innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h2>🎴 BambooHR Flashcards Demo</h2>
+                    <p style="margin: 20px 0; color: #666; font-size: 16px;">
+                        This is a demonstration of the flashcards interface.
+                    </p>
+                    <p style="margin: 20px 0; color: #666; font-size: 16px;">
+                        To use the actual extension:
+                    </p>
+                    <ol style="text-align: left; max-width: 400px; margin: 0 auto; color: #666;">
+                        <li>Install the Chrome extension</li>
+                        <li>Go to your company's BambooHR directory page</li>
+                        <li>Click the "Start Flashcards Game" button</li>
+                        <li>The extension will automatically extract real employee data</li>
+                    </ol>
+                </div>
+            `;
+            return;
+
+            createFlashcardsModal();
+            updateStats();
+            showNextEmployee();
+        }
+
+        function createFlashcardsModal() {
+            const existingModal = document.getElementById('flashcards-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'flashcards-modal';
+            modal.innerHTML = `
+                <div class="flashcards-overlay">
+                    <div class="flashcards-container">
+                        <div class="flashcards-header">
+                            <h2>🎴 Colleague Flashcards</h2>
+                            <button class="close-btn" onclick="document.getElementById('flashcards-modal').remove()">×</button>
+                        </div>
+                        <div class="flashcards-content">
+                            <div class="game-stats">
+                                <div class="stat">
+                                    <span class="stat-label">Remaining:</span>
+                                    <span id="remaining-count">0</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Correct:</span>
+                                    <span id="correct-count">0</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Missed:</span>
+                                    <span id="missed-count">0</span>
+                                </div>
+                            </div>
+                            
+                            <div id="game-container">
+                                <div id="loading-state">
+                                    <p>Loading flashcards...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="game-controls">
+                                <button id="restart-btn" onclick="restartGame()" style="display: none;">🔄 Restart Game</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function showNextEmployee() {
+            const gameContainer = document.getElementById('game-container');
+            
+            if (gameState.currentIndex >= gameState.gameEmployees.length) {
+                showGameComplete();
+                return;
+            }
+
+            const employee = gameState.gameEmployees[gameState.currentIndex];
+            const options = generateAnswerOptions(employee, gameState.gameEmployees);
+
+            gameContainer.innerHTML = `
+                <div class="flashcard">
+                    <div class="employee-photo">
+                        <img src="${employee.profileSrc}" alt="Employee photo" />
+                    </div>
+                    
+                    <div class="question-section">
+                        <h3>Who is this person???</h3>
+                        <div class="answer-options">
+                            ${options.map((option, index) => `
+                                <button class="answer-btn" onclick="selectAnswer(${index}, '${option.id}')">${option.display}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            gameContainer.dataset.correctId = employee.id;
+        }
+
+        function generateAnswerOptions(correctEmployee, allEmployees) {
+            const options = [{
+                id: correctEmployee.id,
+                display: `${correctEmployee.name} - ${correctEmployee.role}`
+            }];
+
+            const otherEmployees = allEmployees.filter(emp => emp.id !== correctEmployee.id);
+            const shuffledOthers = shuffleArray(otherEmployees);
+
+            for (let i = 0; i < 3 && i < shuffledOthers.length; i++) {
+                const emp = shuffledOthers[i];
+                options.push({
+                    id: emp.id,
+                    display: `${emp.name} - ${emp.role}`
+                });
+            }
+
+            return shuffleArray(options);
+        }
+
+        function selectAnswer(optionIndex, selectedId) {
+            const gameContainer = document.getElementById('game-container');
+            const correctId = gameContainer.dataset.correctId;
+            const currentEmployee = gameState.gameEmployees[gameState.currentIndex];
+
+            const answerButtons = document.querySelectorAll('.answer-btn');
+            answerButtons.forEach(btn => btn.disabled = true);
+
+            if (selectedId === correctId) {
+                answerButtons[optionIndex].classList.add('correct');
+                gameState.correctAnswers++;
+
+                setTimeout(() => {
+                    gameState.currentIndex++;
+                    updateStats();
+                    showNextEmployee();
+                }, 1500);
+            } else {
+                answerButtons[optionIndex].classList.add('incorrect');
+
+                answerButtons.forEach((btn, idx) => {
+                    if (btn.onclick.toString().includes(correctId)) {
+                        btn.classList.add('correct');
+                    }
+                });
+
+                if (!gameState.missedEmployees.find(emp => emp.id === currentEmployee.id)) {
+                    gameState.missedEmployees.push(currentEmployee);
+                }
+
+                setTimeout(() => {
+                    gameState.currentIndex++;
+                    updateStats();
+                    showNextEmployee();
+                }, 2500);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('remaining-count').textContent = 
+                gameState.gameEmployees.length - gameState.currentIndex;
+            document.getElementById('correct-count').textContent = gameState.correctAnswers;
+            document.getElementById('missed-count').textContent = gameState.missedEmployees.length;
+        }
+
+        function showGameComplete() {
+            const gameContainer = document.getElementById('game-container');
+            const accuracy = Math.round((gameState.correctAnswers / gameState.gameEmployees.length) * 100);
+
+            gameContainer.innerHTML = `
+                <div class="game-complete">
+                    <h3>🎉 Demo Complete!</h3>
+                    <div class="final-stats">
+                        <p><strong>Total Employees:</strong> ${gameState.gameEmployees.length}</p>
+                        <p><strong>Correct Answers:</strong> ${gameState.correctAnswers}</p>
+                        <p><strong>Accuracy:</strong> ${accuracy}%</p>
+                        <p><strong>Employees to Review:</strong> ${gameState.missedEmployees.length}</p>
+                    </div>
+                    
+                    ${gameState.missedEmployees.length > 0 ? `
+                        <div class="missed-employees">
+                            <h4>Review These Colleagues:</h4>
+                            <div class="missed-list">
+                                ${gameState.missedEmployees.map(emp => `
+                                    <div class="missed-employee">
+                                        <img src="${emp.profileSrc}" alt="${emp.name}" />
+                                        <div>
+                                            <strong>${emp.name}</strong><br>
+                                            <small>${emp.role}</small>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : '<p class="perfect-score">Perfect score! 🌟</p>'}
+                </div>
+            `;
+
+            document.getElementById('restart-btn').style.display = 'inline-block';
+        }
+
+        function restartGame() {
+            // This function is not used in the demo interface
+            // In the actual extension, it would restart with real employee data
+            showDemo();
+        }
+
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+    </script>
+</body>
+</html> 
