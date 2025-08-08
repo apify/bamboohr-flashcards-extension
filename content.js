@@ -205,6 +205,198 @@ function clearGameSession() {
   }
 }
 
+// Function to get total employee count from the header
+function getTotalEmployeeCount() {
+  // Try multiple selectors that might contain the total count
+  const selectors = [
+    '[data-testid="directory-header"] span',
+    '.directory-header span',
+    'h1 span',
+    '[class*="header"] [class*="count"]',
+    '[class*="directory"] [class*="count"]',
+    'span[class*="count"]',
+    '.header-text span'
+  ];
+  
+  for (const selector of selectors) {
+    const elements = document.querySelectorAll(selector);
+    for (const element of elements) {
+      const text = element.textContent || element.innerText;
+      // Look for patterns like "245 employees" or "(245)" or just "245"
+      const match = text.match(/(\d+)\s*(?:employees?|people|total)?/i);
+      if (match && parseInt(match[1]) > 10) { // Should be more than 10 for a company
+        console.log(`Found total employee count: ${match[1]} from selector: ${selector}`);
+        return parseInt(match[1]);
+      }
+    }
+  }
+  
+  // Fallback: look for any number that appears in page title or header
+  const pageTitle = document.title;
+  const titleMatch = pageTitle.match(/(\d+)\s*(?:employees?|people)/i);
+  if (titleMatch) {
+    console.log(`Found total employee count in page title: ${titleMatch[1]}`);
+    return parseInt(titleMatch[1]);
+  }
+  
+  console.warn('Could not find total employee count in header');
+  return null;
+}
+
+// Load all employees by handling infinite scroll
+async function loadAllEmployees() {
+  console.log('Starting to load all employees...');
+  
+  // Get the total employee count from header
+  const totalEmployeeCount = getTotalEmployeeCount();
+  
+  let scrollAttempts = 0;
+  const maxScrollAttempts = 200; // Increased for large organizations
+  let lastLoadedCount = 0;
+  let consecutiveNoProgress = 0;
+  
+  while (scrollAttempts < maxScrollAttempts) {
+    // Count currently loaded employees
+    const loadedEmployees = document.querySelectorAll('.EmployeeCardContainer__card').length;
+    const invisibleElements = document.querySelectorAll('.EmployeeCardContainer__invisibleDiv');
+    
+    console.log(`Loaded: ${loadedEmployees}, Target: ${totalEmployeeCount || 'unknown'}, Invisible: ${invisibleElements.length}`);
+    
+    // Update loading progress
+    updateLoadingProgress(scrollAttempts + 1, invisibleElements.length, loadedEmployees, totalEmployeeCount);
+    
+    // Check if we've loaded all employees based on header count
+    if (totalEmployeeCount && loadedEmployees >= totalEmployeeCount) {
+      console.log(`All ${totalEmployeeCount} employees loaded successfully!`);
+      break;
+    }
+    
+    // Check if no invisible elements remain
+    if (invisibleElements.length === 0) {
+      console.log('No more invisible elements found. All available employees loaded.');
+      break;
+    }
+    
+    // Check for progress - if no new employees loaded in last attempt
+    if (loadedEmployees === lastLoadedCount) {
+      consecutiveNoProgress++;
+      if (consecutiveNoProgress >= 3) {
+        console.log('No progress in loading employees for 3 attempts. Stopping.');
+        break;
+      }
+    } else {
+      consecutiveNoProgress = 0;
+    }
+    lastLoadedCount = loadedEmployees;
+    
+    // Super aggressive scrolling - scroll to multiple elements at once
+    if (invisibleElements.length > 20) {
+      // Scroll to 3 different points quickly
+      const points = [
+        Math.floor(invisibleElements.length * 0.3),
+        Math.floor(invisibleElements.length * 0.6),
+        invisibleElements.length - 1
+      ];
+      
+      for (const pointIndex of points) {
+        invisibleElements[pointIndex].scrollIntoView({ behavior: 'auto', block: 'start' });
+        await new Promise(resolve => setTimeout(resolve, 50)); // Very fast
+      }
+    } else if (invisibleElements.length > 5) {
+      // Scroll to middle and end
+      const midPoint = Math.floor(invisibleElements.length / 2);
+      invisibleElements[midPoint].scrollIntoView({ behavior: 'auto', block: 'start' });
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      invisibleElements[invisibleElements.length - 1].scrollIntoView({ behavior: 'auto', block: 'start' });
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } else {
+      // Just scroll to the last element
+      invisibleElements[invisibleElements.length - 1].scrollIntoView({ behavior: 'auto', block: 'start' });
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    
+    scrollAttempts++;
+  }
+  
+  if (scrollAttempts >= maxScrollAttempts) {
+    console.warn('Reached maximum scroll attempts. Some employees might not be loaded.');
+  }
+  
+  const finalCount = document.querySelectorAll('.EmployeeCardContainer__card').length;
+  console.log(`Finished loading employees. Final count: ${finalCount}, Target: ${totalEmployeeCount || 'unknown'}, Scroll attempts: ${scrollAttempts}`);
+}
+
+// Create loading modal
+function createLoadingModal() {
+  // Remove existing modal if any
+  const existingModal = document.getElementById('flashcards-loading-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  const modal = document.createElement('div');
+  modal.id = 'flashcards-loading-modal';
+  modal.innerHTML = `
+    <div class="flashcards-overlay">
+      <div class="flashcards-container" style="max-width: 400px;">
+        <div class="flashcards-header">
+          <h2 class="flashcards-title">🔄 Loading Employees</h2>
+        </div>
+        <div class="flashcards-content" style="text-align: center; padding: 30px;">
+          <div class="loading-spinner" style="margin-bottom: 20px;">
+            <div style="
+              width: 40px; 
+              height: 40px; 
+              border: 4px solid #f3f3f3; 
+              border-top: 4px solid #0061ff; 
+              border-radius: 50%; 
+              animation: spin 1s linear infinite; 
+              margin: 0 auto;
+            "></div>
+          </div>
+          <p id="loading-message">Scrolling through employee directory...</p>
+          <p id="loading-progress" style="font-size: 14px; color: #6c757d;">Scroll attempt: 1</p>
+        </div>
+      </div>
+    </div>
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// Update loading progress
+function updateLoadingProgress(attempt, remainingElements, loadedCount = 0, totalCount = null) {
+  const progressElement = document.getElementById('loading-progress');
+  const messageElement = document.getElementById('loading-message');
+  
+  if (progressElement) {
+    if (totalCount) {
+      const percentage = Math.round((loadedCount / totalCount) * 100);
+      progressElement.textContent = `${loadedCount}/${totalCount} employees loaded (${percentage}%) | Scroll: ${attempt}`;
+    } else {
+      progressElement.textContent = `Scroll attempt: ${attempt} | Loaded: ${loadedCount} | Remaining placeholders: ${remainingElements}`;
+    }
+  }
+  
+  if (messageElement) {
+    if (remainingElements === 0) {
+      messageElement.textContent = 'All employees loaded! Preparing flashcards...';
+    } else if (totalCount) {
+      const percentage = Math.round((loadedCount / totalCount) * 100);
+      messageElement.textContent = `Loading employees... ${percentage}% complete`;
+    } else {
+      messageElement.textContent = 'Scrolling through employee directory...';
+    }
+  }
+}
+
 // Filter employees who joined in the last 3 months
 function filterRecentEmployees(employees) {
   // Since we don't have hire date from the DOM, we'll use all employees for now
@@ -271,27 +463,48 @@ function insertButtonInAnytimeContainer(anytimeContainer) {
 }
 
 // Start the flashcards game
-function startFlashcards() {
-  employees = extractEmployeeData();
-  recentEmployees = filterRecentEmployees(employees);
+async function startFlashcards() {
+  // Show loading modal first
+  createLoadingModal();
   
-  if (recentEmployees.length === 0) {
-    alert('No employee data found. Make sure you\'re on the BambooHR directory page.');
-    return;
+  try {
+    // Load all employees by scrolling through the infinite scroll
+    await loadAllEmployees();
+    
+    employees = extractEmployeeData();
+    recentEmployees = filterRecentEmployees(employees);
+    
+    if (recentEmployees.length === 0) {
+      alert('No employee data found. Make sure you\'re on the BambooHR directory page.');
+      return;
+    }
+    
+    console.log(`Found ${recentEmployees.length} employees for flashcards`);
+    
+    // Create and show flashcards modal
+    createFlashcardsModal();
+  } catch (error) {
+    console.error('Error loading employees:', error);
+    alert('Failed to load all employees. Please try again.');
+    // Remove loading modal if it exists
+    const loadingModal = document.getElementById('flashcards-loading-modal');
+    if (loadingModal) {
+      loadingModal.remove();
+    }
   }
-  
-  console.log(`Found ${recentEmployees.length} employees for flashcards`);
-  
-  // Create and show flashcards modal
-  createFlashcardsModal();
 }
 
 // Create the flashcards game modal
 function createFlashcardsModal() {
-  // Remove existing modal if any
+  // Remove existing modals if any
   const existingModal = document.getElementById('flashcards-modal');
   if (existingModal) {
     existingModal.remove();
+  }
+  
+  const loadingModal = document.getElementById('flashcards-loading-modal');
+  if (loadingModal) {
+    loadingModal.remove();
   }
   
   const modal = document.createElement('div');
