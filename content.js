@@ -145,7 +145,8 @@ function saveGameState(gameState) {
       // Store only employee hashes, not full objects
       seenEmployeeHashes: Array.from(gameState.seenEmployees || []),
       mainQueueHashes: (gameState.mainQueue || []).map(emp => generateNameHash(emp.name)),
-      gameEmployeeHashes: (gameState.gameEmployees || []).map(emp => generateNameHash(emp.name))
+      gameEmployeeHashes: (gameState.gameEmployees || []).map(emp => generateNameHash(emp.name)),
+      missedEmployeeHashes: (gameState.missedEmployees || []).map(emp => generateNameHash(emp.name))
     };
     localStorage.setItem('bamboohr-flashcards-session', JSON.stringify(hashBasedState));
   } catch (error) {
@@ -184,7 +185,9 @@ function getSavedGameState() {
       gameEmployees: (hashBasedState.gameEmployeeHashes || [])
         .map(hash => hashToEmployee[hash])
         .filter(emp => emp), // Remove any employees no longer in directory
-      missedEmployees: [] // Reset missed employees for new session
+      missedEmployees: (hashBasedState.missedEmployeeHashes || [])
+        .map(hash => hashToEmployee[hash])
+        .filter(emp => emp) // Restore missed employees from saved state
     };
     
     return gameState;
@@ -218,123 +221,53 @@ function addFlashcardsButton() {
     return;
   }
   
-  // Look for the Directory heading
-  const directoryTitle = document.querySelector('.PageHeader__title');
-  if (!directoryTitle || !directoryTitle.textContent.includes('Directory')) {
-    console.log('Directory title not found, trying alternative selectors...');
-    
-    // Try alternative selectors for Directory heading
-    const alternatives = [
-      'h2:contains("Directory")',
-      '[class*="PageHeader__title"]',
-      '.PageHeader h2',
-      'h1, h2, h3'
-    ];
-    
-    let foundTitle = null;
-    for (const selector of alternatives) {
-      if (selector.includes('contains')) {
-        // For contains selector, manually check
-        const elements = document.querySelectorAll('h2');
-        for (const el of elements) {
-          if (el.textContent.includes('Directory')) {
-            foundTitle = el;
-            break;
-          }
-        }
-      } else {
-        foundTitle = document.querySelector(selector);
-        if (foundTitle && foundTitle.textContent.includes('Directory')) {
-          break;
-        }
-        foundTitle = null;
-      }
-      
-      if (foundTitle) {
-        console.log('Found Directory title with selector:', selector);
-        break;
-      }
-    }
-    
-    if (!foundTitle) {
-      console.log('No Directory title found for flashcards button');
-      return;
-    }
-    
-    insertButtonNextToTitle(foundTitle);
+  // Look for the AnytimeDirectoryLink container
+  const anytimeContainer = document.querySelector('.AnytimeDirectoryLink');
+  if (!anytimeContainer) {
+    console.log('AnytimeDirectoryLink container not found');
     return;
   }
   
-  insertButtonNextToTitle(directoryTitle);
+  console.log('Found AnytimeDirectoryLink container, adding flashcards button');
+  insertButtonInAnytimeContainer(anytimeContainer);
 }
 
-function insertButtonNextToTitle(titleElement) {
-  console.log('Inserting flashcards button next to title:', titleElement);
+function insertButtonInAnytimeContainer(anytimeContainer) {
+  console.log('Inserting flashcards button in AnytimeDirectoryLink container');
   
-  // Create a wrapper span for the title and icon
-  const titleWrapper = document.createElement('span');
-  titleWrapper.style.cssText = `
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-  `;
+  // Find the existing "Quick access" button to copy its exact styling
+  const existingButton = anytimeContainer.querySelector('button');
+  if (!existingButton) {
+    console.log('Could not find existing button to copy styling from');
+    return;
+  }
   
-  // Create the flashcards icon button
+  // Create the flashcards button with exact same styling as existing button
   const flashcardsBtn = document.createElement('button');
   flashcardsBtn.id = 'flashcards-btn';
   flashcardsBtn.type = 'button';
+  flashcardsBtn.className = existingButton.className; // Copy exact classes
   flashcardsBtn.title = 'Start Flashcards Game';
-  flashcardsBtn.style.cssText = `
-    background: none;
-    border: none;
-    padding: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 4px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  `;
   
+  // Copy the exact structure and styling of the existing button
   flashcardsBtn.innerHTML = `
-    <svg class="flashcards-icon-large" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px; fill: #0061ff;">
-      <path d="M0 96C0 60.7 28.7 32 64 32H384c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96zM48 368v48c0 8.8 7.2 16 16 16H384c8.8 0 16-7.2 16-16V368H48zM48 256H400V96c0-8.8-7.2-16-16-16H64c-8.8 0-16 7.2-16 16V256zM144 144a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM304 192a32 32 0 1 1 0-64 32 32 0 1 1 0 64z"></path>
-    </svg>
+    <span class="Button__content">
+      <svg viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; fill: currentColor;">
+        <path d="M0 96C0 60.7 28.7 32 64 32H384c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96zM48 368v48c0 8.8 7.2 16 16 16H384c8.8 0 16-7.2 16-16V368H48zM48 256H400V96c0-8.8-7.2-16-16-16H64c-8.8 0-16 7.2-16 16V256zM144 144a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM304 192a32 32 0 1 1 0-64 32 32 0 1 1 0 64z"></path>
+      </svg>
+      Colleague Flashcards
+    </span>
   `;
   
-  // Add hover effects
-  flashcardsBtn.addEventListener('mouseenter', () => {
-    flashcardsBtn.style.transform = 'scale(1.1)';
-    flashcardsBtn.style.backgroundColor = 'rgba(0, 97, 255, 0.1)';
-    flashcardsBtn.querySelector('svg').style.fill = '#0056e0';
-  });
-  
-  flashcardsBtn.addEventListener('mouseleave', () => {
-    flashcardsBtn.style.transform = 'scale(1)';
-    flashcardsBtn.style.backgroundColor = 'transparent';
-    flashcardsBtn.querySelector('svg').style.fill = '#0061ff';
-  });
+  // Add margin to separate the buttons
+  flashcardsBtn.style.marginLeft = '12px';
   
   flashcardsBtn.addEventListener('click', startFlashcards);
   
-  // Get the current title text
-  const titleText = titleElement.textContent;
+  // Append the button to the AnytimeDirectoryLink container
+  anytimeContainer.appendChild(flashcardsBtn);
   
-  // Replace the title content with our wrapper
-  titleElement.textContent = '';
-  
-  // Add the title text back
-  const titleSpan = document.createElement('span');
-  titleSpan.textContent = titleText;
-  
-  // Add both to the wrapper
-  titleWrapper.appendChild(titleSpan);
-  titleWrapper.appendChild(flashcardsBtn);
-  
-  // Add wrapper to the title element
-  titleElement.appendChild(titleWrapper);
-  
-  console.log('Flashcards button successfully added next to Directory title');
+  console.log('Flashcards button successfully added to AnytimeDirectoryLink container');
 }
 
 // Start the flashcards game
